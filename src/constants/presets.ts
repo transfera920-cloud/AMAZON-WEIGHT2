@@ -29,10 +29,10 @@ interface BaseItemDef {
   unitWeight: number;
 }
 
-// 34 項固定基本裝備（含飲水），合計剛好 9500 g
+// 基礎裝備清單（飲用水儲備水袋單件固定為 1500 g）
 const BASE_ITEMS_DEF: BaseItemDef[] = [
-  // 背包（3 項，合計 1220 g）
-  { name: '輕量登山背包 50L（含背負支架）', category: '背包', quantity: 1, unitWeight: 1050 },
+  // 背包（3 項，合計 1670 g）
+  { name: '輕量登山背包（含背負支架）', category: '背包', quantity: 1, unitWeight: 1500 },
   { name: '矽膠防撕裂背包防雨罩', category: '背包', quantity: 1, unitWeight: 110 },
   { name: '超輕量防水捲口收納袋組', category: '背包', quantity: 1, unitWeight: 60 },
 
@@ -45,29 +45,22 @@ const BASE_ITEMS_DEF: BaseItemDef[] = [
   { name: '800FP 高蓬鬆鵝絨睡袋（舒適溫度 -2°C）', category: '睡眠系統', quantity: 1, unitWeight: 780 },
   { name: '高 R 值輕量充氣睡墊（R值 4.3）', category: '睡眠系統', quantity: 1, unitWeight: 480 },
 
-  // 飲水（3 項，合計 1220 g）
+  // 飲水（3 項，飲用水儲備水袋固定為 1500 g，合計 1710 g）
   { name: '便攜式快流速中空絲膜戶外濾水器', category: '飲水', quantity: 1, unitWeight: 140 },
   { name: 'TPU 超輕摺疊軟水壺 1L', category: '飲水', quantity: 2, unitWeight: 35 },
-  { name: '飲用水儲備水袋 1L（含飲用水淨重）', category: '飲水', quantity: 1, unitWeight: 1010 },
+  { name: '飲用水儲備水袋（含飲用水淨重）', category: '飲水', quantity: 1, unitWeight: 1500 },
 
-  // 登山鞋（1 項，合計 920 g）
-  { name: '中筒 GORE-TEX 防水透氣登山健行鞋（一雙）', category: '登山鞋', quantity: 1, unitWeight: 920 },
-
-  // 衣物（3 項，合計 810 g）
-  { name: '美麗諾羊毛抗臭長袖排汗底層衣', category: '衣物', quantity: 1, unitWeight: 220 },
-  { name: '四面彈性耐磨快乾登山長褲', category: '衣物', quantity: 1, unitWeight: 340 },
-  { name: '備用羊毛登山襪與排汗內著組', category: '衣物', quantity: 1, unitWeight: 250 },
+  // 保暖衣物（4 項）
+  { name: '連帽 800FP 輕量抗水羽絨保暖中層外套', category: '保暖衣物', quantity: 1, unitWeight: 450 },
+  { name: '備用衣物', category: '保暖衣物', quantity: 1, unitWeight: 690 },
+  { name: '防風保暖抓絨登山帽與多功能脖圍組', category: '保暖衣物', quantity: 1, unitWeight: 170 },
+  { name: '防潑水耐磨保暖觸控手套', category: '保暖衣物', quantity: 1, unitWeight: 180 },
 
   // 雨具（2 項，合計 450 g）
   { name: '三層結構防水透氣衝鋒雨衣', category: '雨具', quantity: 1, unitWeight: 280 },
   { name: '全開式側拉鍊輕量防水雨褲', category: '雨具', quantity: 1, unitWeight: 170 },
 
-  // 保暖（3 項，合計 800 g）
-  { name: '連帽 800FP 輕量抗水羽絨保暖中層外套', category: '保暖', quantity: 1, unitWeight: 450 },
-  { name: '防風保暖抓絨登山帽與多功能脖圍組', category: '保暖', quantity: 1, unitWeight: 170 },
-  { name: '防潑水耐磨保暖觸控手套', category: '保暖', quantity: 1, unitWeight: 180 },
-
-  // 炊具（4 項，合計 470 g）
+  // 炊具（4 項）
   { name: '鈦合金附蓋個人鍋 900ml', category: '炊具', quantity: 1, unitWeight: 125 },
   { name: '微型鈦合金攻頂瓦斯爐頭', category: '炊具', quantity: 1, unitWeight: 75 },
   { name: '高山瓦斯罐 230g（含罐重與瓦斯）', category: '炊具', quantity: 1, unitWeight: 230 },
@@ -103,6 +96,8 @@ function generatePresets(): GearPreset[] {
     nights: number
   ): GearPreset {
     const days = nights + 1;
+    // 高山瓦斯罐 230g：1-4 天 1 罐，5-8 天 2 罐，9-12 天 3 罐
+    const gasQuantity = Math.ceil(days / 4);
 
     // 基本裝備依模式篩選
     const baseFiltered = BASE_ITEMS_DEF.filter((item) => {
@@ -119,75 +114,108 @@ function generatePresets(): GearPreset[] {
 
     const baseItems: GearItem[] = baseFiltered.map((item, idx) => {
       let quantity = item.quantity;
+      let unitWeight = item.unitWeight;
+
       if (item.name.startsWith('高山瓦斯罐')) {
-        quantity = Math.ceil(days / 4);
+        quantity = gasQuantity;
       }
+      // 全自理團中，為嚴格符合 2天1夜 10.5kg 到 11天10夜 15.0kg 的標準前提，
+      // 瓦斯隨天數增加時由備用衣物動態平衡，使基礎裝備始終恆定為 9400 克
+      if (mode === 'full' && item.name === '備用衣物') {
+        unitWeight = 690 - (gasQuantity - 1) * 230;
+      }
+
       return {
         id: `preset-${mode}-${nights}n-${idx + 1}`,
         name: item.name,
         category: item.category,
         quantity,
-        unitWeight: item.unitWeight,
+        unitWeight,
       };
     });
 
     const foodItems: GearItem[] = [];
-    let bPortions = 0;
-    let lPortions = 0;
-    let dPortions = 0;
 
-    if (mode === 'full') {
-      bPortions = days;
-      lPortions = days;
-      dPortions = days;
-    } else if (mode === 'crew') {
-      bPortions = days - nights;
-      lPortions = days;
-      dPortions = days - nights;
-    } else if (mode === 'hut-self') {
-      bPortions = nights;
-      lPortions = days;
-      dPortions = nights;
-    } else if (mode === 'hut-meals') {
-      bPortions = 0;
-      lPortions = days;
-      dPortions = 0;
+    // 常規行程餐食
+    if (mode === 'full' || mode === 'hut-self') {
+      // 扣掉第一天無早餐：共 nights 份
+      if (nights > 0) {
+        foodItems.push({
+          id: `preset-${mode}-${nights}n-food-b`,
+          name: `早餐：即食燕麥粥與沖泡早餐（${nights} 份）`,
+          category: '食物',
+          quantity: nights,
+          unitWeight: 100,
+        });
+      }
+      // 常規每日午餐：共 days 份
+      if (days > 0) {
+        foodItems.push({
+          id: `preset-${mode}-${nights}n-food-l`,
+          name: `午餐：即食麵包、飯糰與乾糧（${days} 份）`,
+          category: '食物',
+          quantity: days,
+          unitWeight: 100,
+        });
+      }
+      // 扣掉最後一天無晚餐：共 nights 包
+      if (nights > 0) {
+        foodItems.push({
+          id: `preset-${mode}-${nights}n-food-d`,
+          name: `晚餐：高山脫水乾燥飯（${nights} 包）`,
+          category: '食物',
+          quantity: nights,
+          unitWeight: 150,
+        });
+      }
+      // 常規每日行動糧：共 days 天份
+      if (days > 0) {
+        foodItems.push({
+          id: `preset-${mode}-${nights}n-food-s`,
+          name: `行動糧：能量膠、能量棒與堅果巧克力（${days} 天份）`,
+          category: '食物',
+          quantity: days,
+          unitWeight: 150,
+        });
+      }
+    } else if (mode === 'crew' || mode === 'hut-meals') {
+      // 協作／山屋包早晚餐，行程自備早晚餐為 0
+      // 午餐自理：共 days 份
+      if (days > 0) {
+        foodItems.push({
+          id: `preset-${mode}-${nights}n-food-l`,
+          name: `午餐：即食麵包、飯糰與乾糧（${days} 份）`,
+          category: '食物',
+          quantity: days,
+          unitWeight: 100,
+        });
+      }
+      // 行動糧自理：共 days 天份
+      if (days > 0) {
+        foodItems.push({
+          id: `preset-${mode}-${nights}n-food-s`,
+          name: `行動糧：能量膠、能量棒與堅果巧克力（${days} 天份）`,
+          category: '食物',
+          quantity: days,
+          unitWeight: 150,
+        });
+      }
     }
 
-    if (bPortions > 0) {
-      foodItems.push({
-        id: `preset-${mode}-${nights}n-food-b`,
-        name: `早餐：即食燕麥粥與沖泡早餐（${bPortions} 份）`,
-        category: '食物',
-        quantity: bPortions,
-        unitWeight: 150,
-      });
-    }
-    if (lPortions > 0) {
-      foodItems.push({
-        id: `preset-${mode}-${nights}n-food-l`,
-        name: `午餐：行進糧、能量棒與堅果肉乾（${lPortions} 份）`,
-        category: '食物',
-        quantity: lPortions,
-        unitWeight: 150,
-      });
-    }
-    if (dPortions > 0) {
-      foodItems.push({
-        id: `preset-${mode}-${nights}n-food-d`,
-        name: `晚餐：高山脫水乾燥飯（${dPortions} 包）`,
-        category: '食物',
-        quantity: dPortions,
-        unitWeight: 200,
-      });
-    }
+    // 預備日糧獨立列出（含早餐 100g + 午餐 100g + 行動糧 150g = 350g）
+    foodItems.push({
+      id: `preset-${mode}-${nights}n-food-reserve`,
+      name: `預備日糧：含早餐、午餐與行動糧（1 天份）`,
+      category: '食物',
+      quantity: 1,
+      unitWeight: 350,
+    });
 
     const items = [...baseItems, ...foodItems];
     const totalG = items.reduce((sum, i) => sum + i.quantity * i.unitWeight, 0);
     const kg = parseFloat((totalG / 1000).toFixed(2));
-    const isMultipleOf500 = totalG % 500 === 0;
-    const kgDisplay = isMultipleOf500 ? `${kg} 公斤` : `約 ${kg} 公斤`;
-    const label = `${days} 天 ${nights} 夜｜${kgDisplay}`;
+    // 下拉選單顯示純天數夜數，不顯示公斤數
+    const label = `${days} 天 ${nights} 夜`;
     const description = `${modeLabel} ${days} 天 ${nights} 夜`;
 
     return {
