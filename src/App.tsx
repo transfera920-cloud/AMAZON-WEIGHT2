@@ -9,10 +9,20 @@ import { Footer } from './components/Footer';
 import { Tool01Page } from './components/Tool01Page';
 
 export default function App() {
-  // Normalize /tool01 to /tool01/ if the URL is strictly /tool01
+  // Normalize /tool01, /TOOL01, /Tool01, /TOOL01/ etc. strictly to lowercase /tool01/
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.pathname === '/tool01') {
-      window.history.replaceState(null, '', '/tool01/');
+    if (typeof window !== 'undefined') {
+      const currentPath = window.location.pathname;
+      const lower = currentPath.toLowerCase();
+      if (lower === '/tool01' || lower === '/tool01/') {
+        if (currentPath !== '/tool01/') {
+          window.history.replaceState(
+            null,
+            '',
+            '/tool01/' + window.location.search + window.location.hash
+          );
+        }
+      }
     }
   }, []);
 
