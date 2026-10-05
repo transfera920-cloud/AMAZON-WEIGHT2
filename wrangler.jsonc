@@ -1,0 +1,10 @@
+{
+  "name": "amazon-weight2",
+  "compatibility_date": "2026-10-01",
+  "build": {
+    "command": "npm run build"
+  },
+  "assets": {
+    "directory": "./dist"
+  }
+}
