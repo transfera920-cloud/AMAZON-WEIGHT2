@@ -1,0 +1,8 @@
+{
+  "name": "登山裝備重量計算工具 - 亞馬遜國家山岳協會",
+  "description": "實用的登山裝備重量計算工具，可依分類自訂整理背包各項裝備，即時自動統計單件、類別與整體背包重量，資料安全儲存於瀏覽器，是您規劃百岳與長程縱走輕量化的最佳幫手。",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
