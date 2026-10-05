@@ -7,7 +7,7 @@ import {
   saveCategoriesToStorage,
   clearTool01Storage,
 } from '../utils/storage';
-import { DEFAULT_CATEGORIES, SAMPLE_GEAR_ITEMS } from '../constants/defaultCategories';
+import { DEFAULT_CATEGORIES } from '../constants/defaultCategories';
 import { WeightSummary } from './WeightSummary';
 import { GearList } from './GearList';
 import { CategoryManagerModal } from './CategoryManagerModal';
@@ -114,10 +114,10 @@ export const Tool01Page: React.FC = () => {
   };
 
   // Load sample packing list (only when explicitly requested by user)
-  const handleLoadSampleData = () => {
-    setItems(SAMPLE_GEAR_ITEMS.map((item) => ({ ...item })));
+  const handleLoadSampleData = (presetItems: GearItem[]) => {
+    setItems(presetItems.map((item) => ({ ...item })));
     // Ensure all sample categories exist
-    const newCats = Array.from(new Set([...categories, ...SAMPLE_GEAR_ITEMS.map((i) => i.category)]));
+    const newCats = Array.from(new Set([...categories, ...presetItems.map((i) => i.category)]));
     setCategories(newCats);
     // Smoothly scroll to weight summary section
     setTimeout(() => {

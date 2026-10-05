@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GearItem } from '../types/gear';
 import { calculateItemTotal, formatGrams, formatKilograms, formatPercentage } from '../utils/weight';
+import { GEAR_PRESETS, DEFAULT_PRESET_KG } from '../constants/presets';
 import {
   Plus,
   Trash2,
@@ -23,7 +24,7 @@ interface GearListProps {
   onDeleteItem: (id: string) => void;
   onOpenCategoryManager: () => void;
   onClearAll: () => void;
-  onLoadSampleData: () => void;
+  onLoadSampleData: (items: GearItem[]) => void;
 }
 
 export const GearList: React.FC<GearListProps> = ({
@@ -37,6 +38,11 @@ export const GearList: React.FC<GearListProps> = ({
   onClearAll,
   onLoadSampleData,
 }) => {
+  // Preset selection state
+  const [selectedPresetKg, setSelectedPresetKg] = useState<number>(DEFAULT_PRESET_KG);
+  const currentPreset =
+    GEAR_PRESETS.find((p) => p.kg === selectedPresetKg) || GEAR_PRESETS[1];
+
   // New Item Quick Form State
   const [quickName, setQuickName] = useState('');
   const [quickCategory, setQuickCategory] = useState(categories[0] || '其他');
@@ -93,11 +99,11 @@ export const GearList: React.FC<GearListProps> = ({
     setQuickError('');
   };
 
-  // Click handler for "載入 12 公斤建議清單" button
+  // Click handler for suggested list button
   const handleLoadSuggestedClick = () => {
     if (items.length === 0) {
       // If list is empty, directly load without confirmation
-      onLoadSampleData();
+      onLoadSampleData(currentPreset.items);
     } else {
       // If items exist, show confirmation dialog first
       setShowLoadConfirm(true);
@@ -124,15 +130,29 @@ export const GearList: React.FC<GearListProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto">
-            {/* Primary prominent button: 載入 12 公斤建議清單 */}
+            {/* Preset Selector */}
+            <select
+              value={selectedPresetKg}
+              onChange={(e) => setSelectedPresetKg(Number(e.target.value))}
+              aria-label="選擇建議裝備清單"
+              className="flex-1 sm:flex-none min-h-[44px] px-3 py-2 text-xs sm:text-sm font-medium border border-stone-700 rounded-lg bg-stone-800 text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              {GEAR_PRESETS.map((preset) => (
+                <option key={preset.kg} value={preset.kg}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Primary prominent button: 載入 {所選公斤數} 公斤建議清單 */}
             <button
               type="button"
               onClick={handleLoadSuggestedClick}
               className="flex-1 sm:flex-none inline-flex items-center justify-center space-x-1.5 px-3.5 py-2 min-h-[44px] text-xs sm:text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-colors shadow-xs"
-              title="載入 12 公斤標準登山裝備建議清單"
+              title={currentPreset.description}
             >
               <Sparkles className="w-4 h-4 text-emerald-100" />
-              <span>載入 12 公斤建議清單</span>
+              <span>載入 {currentPreset.kg} 公斤建議清單</span>
             </button>
 
             {/* Manage categories button */}
@@ -241,7 +261,7 @@ export const GearList: React.FC<GearListProps> = ({
           <div className="max-w-md mx-auto space-y-1.5">
             <h3 className="text-base font-bold text-stone-100">目前沒有裝備</h3>
             <p className="text-sm text-stone-400 leading-relaxed">
-              目前沒有裝備。可以自己新增，或載入 12 公斤建議清單（2 晚 3 天、含飲水與糧食）作為起點。
+              目前沒有裝備。可以自己新增，或在上方選擇 10.5 至 15 公斤的建議清單（含飲水與糧食）作為起點，目前選擇：{currentPreset.kg} 公斤（{currentPreset.description}）。
             </p>
           </div>
           <div className="pt-2">
@@ -249,9 +269,10 @@ export const GearList: React.FC<GearListProps> = ({
               type="button"
               onClick={handleLoadSuggestedClick}
               className="inline-flex items-center space-x-2 px-5 py-2.5 min-h-[44px] text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-colors shadow-xs"
+              title={currentPreset.description}
             >
               <Sparkles className="w-4 h-4 text-emerald-100" />
-              <span>載入 12 公斤建議清單</span>
+              <span>載入 {currentPreset.kg} 公斤建議清單</span>
             </button>
           </div>
         </div>
@@ -521,7 +542,7 @@ export const GearList: React.FC<GearListProps> = ({
               <div>
                 <h4 className="text-base font-bold text-stone-100">載入建議清單？</h4>
                 <p className="text-xs sm:text-sm text-stone-300 mt-1 leading-relaxed">
-                  目前清單的 {items.length} 項裝備將被取代為 41 項建議裝備（總重 12.00 kg）。此動作無法復原。
+                  目前清單的 {items.length} 項裝備將被取代為 {currentPreset.items.length} 項建議裝備（{currentPreset.description}，總重 {currentPreset.kg} kg）。此動作無法復原。
                 </p>
               </div>
             </div>
@@ -537,7 +558,7 @@ export const GearList: React.FC<GearListProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  onLoadSampleData();
+                  onLoadSampleData(currentPreset.items);
                   setShowLoadConfirm(false);
                 }}
                 className="min-h-[44px] px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-colors shadow-2xs"

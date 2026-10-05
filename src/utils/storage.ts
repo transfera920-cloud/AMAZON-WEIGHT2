@@ -1,21 +1,22 @@
 import { GearItem } from '../types/gear';
-import { DEFAULT_CATEGORIES, SAMPLE_GEAR_ITEMS } from '../constants/defaultCategories';
+import { DEFAULT_CATEGORIES } from '../constants/defaultCategories';
+import { DEFAULT_PRESET_ITEMS } from '../constants/presets';
 
 export const STORAGE_KEY_GEAR = 'amazon-hike-tool01-gear-list-v1';
 export const STORAGE_KEY_CATEGORIES = 'amazon-hike-tool01-categories-v1';
 
 /**
  * Loads gear items from localStorage.
- * - If the key does not exist at all (first-time user), returns a deep copy of SAMPLE_GEAR_ITEMS.
+ * - If the key does not exist at all (first-time user), returns a deep copy of DEFAULT_PRESET_ITEMS.
  * - If the key exists (even if empty array []), faithfully returns the stored array.
  * - If corrupted or exception occurs, falls back to deep copy of default list to prevent white screen.
  */
 export function loadGearItemsFromStorage(): GearItem[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_GEAR);
-    // Key does not exist -> first time visiting, load default 12kg gear list
+    // Key does not exist -> first time visiting, load default 11kg gear list
     if (raw === null) {
-      return SAMPLE_GEAR_ITEMS.map((item) => ({ ...item }));
+      return DEFAULT_PRESET_ITEMS.map((item) => ({ ...item }));
     }
 
     const parsed = JSON.parse(raw);
@@ -31,10 +32,10 @@ export function loadGearItemsFromStorage(): GearItem[] {
   } catch (error) {
     console.warn('Failed to load gear items from localStorage:', error);
     // Fallback to default list on exception to avoid blank page
-    return SAMPLE_GEAR_ITEMS.map((item) => ({ ...item }));
+    return DEFAULT_PRESET_ITEMS.map((item) => ({ ...item }));
   }
 
-  return SAMPLE_GEAR_ITEMS.map((item) => ({ ...item }));
+  return DEFAULT_PRESET_ITEMS.map((item) => ({ ...item }));
 }
 
 export function saveGearItemsToStorage(items: GearItem[]): boolean {
