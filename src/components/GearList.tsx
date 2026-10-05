@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { GearItem } from '../types/gear';
 import { calculateItemTotal, formatGrams, formatKilograms, formatPercentage } from '../utils/weight';
-import { GEAR_PRESETS, DEFAULT_PRESET_KG } from '../constants/presets';
+import {
+  GEAR_PRESETS,
+  PRESET_MODES,
+  DEFAULT_PRESET_MODE,
+  DEFAULT_PRESET_NIGHTS,
+  PresetMode,
+} from '../constants/presets';
 import {
   Plus,
   Trash2,
@@ -38,10 +44,29 @@ export const GearList: React.FC<GearListProps> = ({
   onClearAll,
   onLoadSampleData,
 }) => {
-  // Preset selection state
-  const [selectedPresetKg, setSelectedPresetKg] = useState<number>(DEFAULT_PRESET_KG);
+  // Mode & Nights selection state
+  const [selectedMode, setSelectedMode] = useState<PresetMode>(DEFAULT_PRESET_MODE);
+  const [selectedNights, setSelectedNights] = useState<number>(DEFAULT_PRESET_NIGHTS);
+
+  // Presets available for current mode
+  const modePresets = GEAR_PRESETS.filter((p) => p.mode === selectedMode);
+
+  // Active preset based on mode and nights
   const currentPreset =
-    GEAR_PRESETS.find((p) => p.kg === selectedPresetKg) || GEAR_PRESETS[1];
+    modePresets.find((p) => p.nights === selectedNights) ||
+    modePresets[modePresets.length - 1] ||
+    GEAR_PRESETS[0];
+
+  // Mode change handler: if selectedNights is not in the new mode, select the longest night in that mode
+  const handleModeChange = (newMode: PresetMode) => {
+    setSelectedMode(newMode);
+    const available = GEAR_PRESETS.filter((p) => p.mode === newMode);
+    const exists = available.some((p) => p.nights === selectedNights);
+    if (!exists && available.length > 0) {
+      const maxNights = Math.max(...available.map((p) => p.nights));
+      setSelectedNights(maxNights);
+    }
+  };
 
   // New Item Quick Form State
   const [quickName, setQuickName] = useState('');
@@ -130,21 +155,35 @@ export const GearList: React.FC<GearListProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto">
-            {/* Preset Selector */}
+            {/* Mode Selector */}
             <select
-              value={selectedPresetKg}
-              onChange={(e) => setSelectedPresetKg(Number(e.target.value))}
-              aria-label="選擇建議裝備清單"
+              value={selectedMode}
+              onChange={(e) => handleModeChange(e.target.value as PresetMode)}
+              aria-label="選擇建議清單模式"
               className="flex-1 sm:flex-none min-h-[44px] px-3 py-2 text-xs sm:text-sm font-medium border border-stone-700 rounded-lg bg-stone-800 text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
             >
-              {GEAR_PRESETS.map((preset) => (
-                <option key={preset.kg} value={preset.kg}>
+              {PRESET_MODES.map((mode) => (
+                <option key={mode.value} value={mode.value}>
+                  {mode.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Days/Nights Selector */}
+            <select
+              value={selectedNights}
+              onChange={(e) => setSelectedNights(Number(e.target.value))}
+              aria-label="選擇天數與夜數"
+              className="flex-1 sm:flex-none min-h-[44px] px-3 py-2 text-xs sm:text-sm font-medium border border-stone-700 rounded-lg bg-stone-800 text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              {modePresets.map((preset) => (
+                <option key={preset.id} value={preset.nights}>
                   {preset.label}
                 </option>
               ))}
             </select>
 
-            {/* Primary prominent button: 載入 {所選公斤數} 公斤建議清單 */}
+            {/* Primary prominent button: 載入建議清單（{description}） */}
             <button
               type="button"
               onClick={handleLoadSuggestedClick}
@@ -152,7 +191,7 @@ export const GearList: React.FC<GearListProps> = ({
               title={currentPreset.description}
             >
               <Sparkles className="w-4 h-4 text-emerald-100" />
-              <span>載入 {currentPreset.kg} 公斤建議清單</span>
+              <span>載入建議清單（{currentPreset.description}）</span>
             </button>
 
             {/* Manage categories button */}
@@ -261,7 +300,7 @@ export const GearList: React.FC<GearListProps> = ({
           <div className="max-w-md mx-auto space-y-1.5">
             <h3 className="text-base font-bold text-stone-100">目前沒有裝備</h3>
             <p className="text-sm text-stone-400 leading-relaxed">
-              目前沒有裝備。可以自己新增，或在上方選擇 10.5 至 15 公斤的建議清單（含飲水與糧食）作為起點，目前選擇：{currentPreset.kg} 公斤（{currentPreset.description}）。
+              目前沒有裝備。可以自己新增，或在上方選擇模式與天數，載入建議清單（含飲水與糧食）作為起點，目前選擇：{currentPreset.description}（{currentPreset.kg.toFixed(2)} kg）。
             </p>
           </div>
           <div className="pt-2">
@@ -272,7 +311,7 @@ export const GearList: React.FC<GearListProps> = ({
               title={currentPreset.description}
             >
               <Sparkles className="w-4 h-4 text-emerald-100" />
-              <span>載入 {currentPreset.kg} 公斤建議清單</span>
+              <span>載入建議清單（{currentPreset.description}）</span>
             </button>
           </div>
         </div>
