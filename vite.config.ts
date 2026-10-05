@@ -6,6 +6,9 @@ import {defineConfig} from 'vite';
 export default defineConfig(({mode}) => {
   return {
     base: mode === 'production' ? '/tool01/' : '/',
+    build: {
+      outDir: mode === 'production' ? 'dist/tool01' : 'dist',
+    },
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
