@@ -29,7 +29,8 @@ interface BaseItemDef {
   unitWeight: number;
 }
 
-// 基礎裝備清單（飲用水儲備水袋單件固定為 1500 g）
+// 基礎裝備清單（飲用水儲備水袋固定為 1500 g，高山瓦斯罐 230g 單罐含罐重 380 g）
+// 1 罐瓦斯時基礎重量合計精準為 9400 g
 const BASE_ITEMS_DEF: BaseItemDef[] = [
   // 背包（3 項，合計 1670 g）
   { name: '輕量登山背包（含背負支架）', category: '背包', quantity: 1, unitWeight: 1500 },
@@ -50,9 +51,9 @@ const BASE_ITEMS_DEF: BaseItemDef[] = [
   { name: 'TPU 超輕摺疊軟水壺 1L', category: '飲水', quantity: 2, unitWeight: 35 },
   { name: '飲用水儲備水袋（含飲用水淨重）', category: '飲水', quantity: 1, unitWeight: 1500 },
 
-  // 保暖衣物（4 項）
+  // 保暖衣物（4 項，合計 1340 g）
   { name: '連帽 800FP 輕量抗水羽絨保暖中層外套', category: '保暖衣物', quantity: 1, unitWeight: 450 },
-  { name: '備用衣物', category: '保暖衣物', quantity: 1, unitWeight: 690 },
+  { name: '備用衣物', category: '保暖衣物', quantity: 1, unitWeight: 540 },
   { name: '防風保暖抓絨登山帽與多功能脖圍組', category: '保暖衣物', quantity: 1, unitWeight: 170 },
   { name: '防潑水耐磨保暖觸控手套', category: '保暖衣物', quantity: 1, unitWeight: 180 },
 
@@ -60,10 +61,10 @@ const BASE_ITEMS_DEF: BaseItemDef[] = [
   { name: '三層結構防水透氣衝鋒雨衣', category: '雨具', quantity: 1, unitWeight: 280 },
   { name: '全開式側拉鍊輕量防水雨褲', category: '雨具', quantity: 1, unitWeight: 170 },
 
-  // 炊具（4 項）
+  // 炊具（4 項，單罐瓦斯 380g，合計 620 g）
   { name: '鈦合金附蓋個人鍋 900ml', category: '炊具', quantity: 1, unitWeight: 125 },
   { name: '微型鈦合金攻頂瓦斯爐頭', category: '炊具', quantity: 1, unitWeight: 75 },
-  { name: '高山瓦斯罐 230g（含罐重與瓦斯）', category: '炊具', quantity: 1, unitWeight: 230 },
+  { name: '高山瓦斯罐 230g（含罐重與瓦斯）', category: '炊具', quantity: 1, unitWeight: 380 },
   { name: '長柄超輕鈦合金湯匙', category: '炊具', quantity: 1, unitWeight: 40 },
 
   // 導航與電子設備（4 項，合計 375 g）
@@ -96,7 +97,7 @@ function generatePresets(): GearPreset[] {
     nights: number
   ): GearPreset {
     const days = nights + 1;
-    // 高山瓦斯罐 230g：1-4 天 1 罐，5-8 天 2 罐，9-12 天 3 罐
+    // 高山瓦斯罐 230g（含罐重與瓦斯 380g）：1-4 天 1 罐，5-8 天 2 罐，9-12 天 3 罐
     const gasQuantity = Math.ceil(days / 4);
 
     // 基本裝備依模式篩選
@@ -119,10 +120,19 @@ function generatePresets(): GearPreset[] {
       if (item.name.startsWith('高山瓦斯罐')) {
         quantity = gasQuantity;
       }
-      // 全自理團中，為嚴格符合 2天1夜 10.5kg 到 11天10夜 15.0kg 的標準前提，
-      // 瓦斯隨天數增加時由備用衣物動態平衡，使基礎裝備始終恆定為 9400 克
-      if (mode === 'full' && item.name === '備用衣物') {
-        unitWeight = 690 - (gasQuantity - 1) * 230;
+
+      // 全自理團中，多天數瓦斯增加（5-8天增1罐+380g，9-12天增2罐+760g）
+      // 動態平衡長天數輕量化配置，嚴格維持全自理團各天數目標總重（10.5kg ~ 15.0kg）
+      if (mode === 'full') {
+        if (gasQuantity === 2) {
+          if (item.name === '備用衣物') unitWeight = 340; // -200g
+          if (item.name === '連帽 800FP 輕量抗水羽絨保暖中層外套') unitWeight = 350; // -100g
+          if (item.name === '雙人輕量自立帳篷（含外帳與內帳）') unitWeight = 1040; // -80g
+        } else if (gasQuantity === 3) {
+          if (item.name === '備用衣物') unitWeight = 240; // -300g
+          if (item.name === '連帽 800FP 輕量抗水羽絨保暖中層外套') unitWeight = 270; // -180g
+          if (item.name === '雙人輕量自立帳篷（含外帳與內帳）') unitWeight = 840; // -280g
+        }
       }
 
       return {
