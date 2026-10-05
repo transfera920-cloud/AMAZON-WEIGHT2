@@ -1,6 +1,6 @@
 import { GearItem } from '../types/gear';
 
-export type PresetMode = 'tent' | 'hut-self' | 'hut-meals';
+export type PresetMode = 'full' | 'crew' | 'hut-self' | 'hut-meals';
 
 export interface GearPreset {
   id: string;
@@ -13,12 +13,13 @@ export interface GearPreset {
 }
 
 export const PRESET_MODES: { value: PresetMode; label: string }[] = [
-  { value: 'tent', label: '帳篷縱走' },
-  { value: 'hut-self', label: '山屋（自炊）' },
-  { value: 'hut-meals', label: '山屋（包餐）' },
+  { value: 'full', label: '全自理團' },
+  { value: 'crew', label: '協作團' },
+  { value: 'hut-self', label: '山屋(全自理)' },
+  { value: 'hut-meals', label: '山屋(包餐)' },
 ];
 
-export const DEFAULT_PRESET_MODE: PresetMode = 'tent';
+export const DEFAULT_PRESET_MODE: PresetMode = 'full';
 export const DEFAULT_PRESET_NIGHTS = 2;
 
 interface BaseItemDef {
@@ -96,154 +97,128 @@ const BASE_ITEMS_DEF: BaseItemDef[] = [
 function generatePresets(): GearPreset[] {
   const result: GearPreset[] = [];
 
-  // 1. 帳篷縱走：1 到 10 夜（2 天 1 夜 到 11 天 10 夜）
+  function buildItemsForPreset(
+    mode: PresetMode,
+    modeLabel: string,
+    nights: number
+  ): GearPreset {
+    const days = nights + 1;
+
+    // 基本裝備依模式篩選
+    const baseFiltered = BASE_ITEMS_DEF.filter((item) => {
+      if (mode === 'full') return true;
+      if (mode === 'hut-self') return item.category !== '帳篷／遮蔽';
+      if (mode === 'crew' || mode === 'hut-meals') {
+        if (item.category === '帳篷／遮蔽') return false;
+        if (item.name.startsWith('800FP 高蓬鬆鵝絨睡袋')) return false;
+        if (item.category === '炊具') return false;
+        return true;
+      }
+      return true;
+    });
+
+    const baseItems: GearItem[] = baseFiltered.map((item, idx) => {
+      let quantity = item.quantity;
+      if (item.name.startsWith('高山瓦斯罐')) {
+        quantity = Math.ceil(days / 4);
+      }
+      return {
+        id: `preset-${mode}-${nights}n-${idx + 1}`,
+        name: item.name,
+        category: item.category,
+        quantity,
+        unitWeight: item.unitWeight,
+      };
+    });
+
+    const foodItems: GearItem[] = [];
+    let bPortions = 0;
+    let lPortions = 0;
+    let dPortions = 0;
+
+    if (mode === 'full') {
+      bPortions = days;
+      lPortions = days;
+      dPortions = days;
+    } else if (mode === 'crew') {
+      bPortions = days - nights;
+      lPortions = days;
+      dPortions = days - nights;
+    } else if (mode === 'hut-self') {
+      bPortions = nights;
+      lPortions = days;
+      dPortions = nights;
+    } else if (mode === 'hut-meals') {
+      bPortions = 0;
+      lPortions = days;
+      dPortions = 0;
+    }
+
+    if (bPortions > 0) {
+      foodItems.push({
+        id: `preset-${mode}-${nights}n-food-b`,
+        name: `早餐：即食燕麥粥與沖泡早餐（${bPortions} 份）`,
+        category: '食物',
+        quantity: bPortions,
+        unitWeight: 150,
+      });
+    }
+    if (lPortions > 0) {
+      foodItems.push({
+        id: `preset-${mode}-${nights}n-food-l`,
+        name: `午餐：行進糧、能量棒與堅果肉乾（${lPortions} 份）`,
+        category: '食物',
+        quantity: lPortions,
+        unitWeight: 150,
+      });
+    }
+    if (dPortions > 0) {
+      foodItems.push({
+        id: `preset-${mode}-${nights}n-food-d`,
+        name: `晚餐：高山脫水乾燥飯（${dPortions} 包）`,
+        category: '食物',
+        quantity: dPortions,
+        unitWeight: 200,
+      });
+    }
+
+    const items = [...baseItems, ...foodItems];
+    const totalG = items.reduce((sum, i) => sum + i.quantity * i.unitWeight, 0);
+    const kg = parseFloat((totalG / 1000).toFixed(2));
+    const isMultipleOf500 = totalG % 500 === 0;
+    const kgDisplay = isMultipleOf500 ? `${kg} 公斤` : `約 ${kg} 公斤`;
+    const label = `${days} 天 ${nights} 夜｜${kgDisplay}`;
+    const description = `${modeLabel} ${days} 天 ${nights} 夜`;
+
+    return {
+      id: `${mode}-${nights}n`,
+      mode,
+      nights,
+      kg,
+      label,
+      description,
+      items,
+    };
+  }
+
+  // 1. 全自理團：nights 1 到 10（2 天 1 夜到 11 天 10 夜）
   for (let nights = 1; nights <= 10; nights++) {
-    const days = nights + 1;
-    const baseItems: GearItem[] = BASE_ITEMS_DEF.map((item, idx) => ({
-      id: `preset-tent-${nights}n-${idx + 1}`,
-      name: item.name,
-      category: item.category,
-      quantity: item.quantity,
-      unitWeight: item.unitWeight,
-    }));
-
-    const foodItems: GearItem[] = [
-      {
-        id: `preset-tent-${nights}n-food-b`,
-        name: `早餐：即食燕麥粥與沖泡早餐（${days} 份）`,
-        category: '食物',
-        quantity: days,
-        unitWeight: 150,
-      },
-      {
-        id: `preset-tent-${nights}n-food-l`,
-        name: `午餐：行進糧、能量棒與堅果肉乾（${days} 份）`,
-        category: '食物',
-        quantity: days,
-        unitWeight: 150,
-      },
-      {
-        id: `preset-tent-${nights}n-food-d`,
-        name: `晚餐：高山脫水乾燥飯（${days} 包）`,
-        category: '食物',
-        quantity: days,
-        unitWeight: 200,
-      },
-    ];
-
-    const items = [...baseItems, ...foodItems];
-    const totalG = items.reduce((sum, item) => sum + item.quantity * item.unitWeight, 0);
-    const kg = parseFloat((totalG / 1000).toFixed(2));
-    const label = `${days} 天 ${nights} 夜｜${kg} 公斤`;
-    const description = `帳篷縱走 ${days} 天 ${nights} 夜`;
-
-    result.push({
-      id: `tent-${nights}n`,
-      mode: 'tent',
-      nights,
-      kg,
-      label,
-      description,
-      items,
-    });
+    result.push(buildItemsForPreset('full', '全自理團', nights));
   }
 
-  // 2. 山屋（自炊）：1 到 3 夜（2 天 1 夜 到 4 天 3 夜）
-  for (let nights = 1; nights <= 3; nights++) {
-    const days = nights + 1;
-    const baseItems: GearItem[] = BASE_ITEMS_DEF
-      .filter((item) => item.category !== '帳篷／遮蔽')
-      .map((item, idx) => ({
-        id: `preset-hut-self-${nights}n-${idx + 1}`,
-        name: item.name,
-        category: item.category,
-        quantity: item.quantity,
-        unitWeight: item.unitWeight,
-      }));
-
-    const foodItems: GearItem[] = [
-      {
-        id: `preset-hut-self-${nights}n-food-b`,
-        name: `早餐：即食燕麥粥與沖泡早餐（${nights} 份）`,
-        category: '食物',
-        quantity: nights,
-        unitWeight: 150,
-      },
-      {
-        id: `preset-hut-self-${nights}n-food-l`,
-        name: `午餐：行進糧、能量棒與堅果肉乾（${days} 份）`,
-        category: '食物',
-        quantity: days,
-        unitWeight: 150,
-      },
-      {
-        id: `preset-hut-self-${nights}n-food-d`,
-        name: `晚餐：高山脫水乾燥飯（${nights} 包）`,
-        category: '食物',
-        quantity: nights,
-        unitWeight: 200,
-      },
-    ];
-
-    const items = [...baseItems, ...foodItems];
-    const totalG = items.reduce((sum, item) => sum + item.quantity * item.unitWeight, 0);
-    const kg = parseFloat((totalG / 1000).toFixed(2));
-    const label = `${days} 天 ${nights} 夜｜約 ${kg} 公斤`;
-    const description = `山屋（自炊） ${days} 天 ${nights} 夜`;
-
-    result.push({
-      id: `hut-self-${nights}n`,
-      mode: 'hut-self',
-      nights,
-      kg,
-      label,
-      description,
-      items,
-    });
+  // 2. 協作團：nights 1 到 10（2 天 1 夜到 11 天 10 夜）
+  for (let nights = 1; nights <= 10; nights++) {
+    result.push(buildItemsForPreset('crew', '協作團', nights));
   }
 
-  // 3. 山屋（包餐）：1 到 3 夜（2 天 1 夜 到 4 天 3 夜）
+  // 3. 山屋(全自理)：nights 1 到 3（2 天 1 夜到 4 天 3 夜）
   for (let nights = 1; nights <= 3; nights++) {
-    const days = nights + 1;
-    const baseItems: GearItem[] = BASE_ITEMS_DEF
-      .filter(
-        (item) =>
-          item.category !== '帳篷／遮蔽' &&
-          !item.name.startsWith('800FP 高蓬鬆鵝絨睡袋')
-      )
-      .map((item, idx) => ({
-        id: `preset-hut-meals-${nights}n-${idx + 1}`,
-        name: item.name,
-        category: item.category,
-        quantity: item.quantity,
-        unitWeight: item.unitWeight,
-      }));
+    result.push(buildItemsForPreset('hut-self', '山屋(全自理)', nights));
+  }
 
-    const foodItems: GearItem[] = [
-      {
-        id: `preset-hut-meals-${nights}n-food-l`,
-        name: `午餐：行進糧、能量棒與堅果肉乾（${days} 份）`,
-        category: '食物',
-        quantity: days,
-        unitWeight: 150,
-      },
-    ];
-
-    const items = [...baseItems, ...foodItems];
-    const totalG = items.reduce((sum, item) => sum + item.quantity * item.unitWeight, 0);
-    const kg = parseFloat((totalG / 1000).toFixed(2));
-    const label = `${days} 天 ${nights} 夜｜約 ${kg} 公斤`;
-    const description = `山屋（包餐） ${days} 天 ${nights} 夜`;
-
-    result.push({
-      id: `hut-meals-${nights}n`,
-      mode: 'hut-meals',
-      nights,
-      kg,
-      label,
-      description,
-      items,
-    });
+  // 4. 山屋(包餐)：nights 1 到 3（2 天 1 夜到 4 天 3 夜）
+  for (let nights = 1; nights <= 3; nights++) {
+    result.push(buildItemsForPreset('hut-meals', '山屋(包餐)', nights));
   }
 
   return result;
@@ -252,5 +227,5 @@ function generatePresets(): GearPreset[] {
 export const GEAR_PRESETS: GearPreset[] = generatePresets();
 
 export const DEFAULT_PRESET_ITEMS: GearItem[] =
-  GEAR_PRESETS.find((p) => p.mode === 'tent' && p.nights === DEFAULT_PRESET_NIGHTS)
+  GEAR_PRESETS.find((p) => p.mode === 'full' && p.nights === DEFAULT_PRESET_NIGHTS)
     ?.items || GEAR_PRESETS[1].items;
